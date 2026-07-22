@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>AKASHVEER — Sky Warrior</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap');
+
+  :root{
+    --sky-top:#241033;
+    --sky-mid:#7a2c3f;
+    --sky-horizon:#ff9a4d;
+    --gold:#ffd166;
+    --gold-deep:#d99a2b;
+    --demon:#5c1420;
+    --demon-glow:#ff4433;
+    --boy-skin:#e8b382;
+    --boy-cloth:#ff7b39;
+    --ink:#fbe9d0;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html,body{
+    margin:0; padding:0; height:100%; width:100%;
+    background:#120818;
+    font-family:'EB Garamond', serif;
+    overflow:hidden;
+    color:var(--ink);
+    overscroll-behavior:none;
+  }
+
+  #wrap{
+    position:fixed; inset:0;
+    width:100vw; height:100vh;
+    width:100dvw; height:100dvh;
+  }
+
+  canvas{
+    display:block;
+    width:100%; height:100%;
+    touch-action:none;
+  }
+
+  .hud{
+    position:absolute; top:max(18px, env(safe-area-inset-top)); left:0; right:0;
+    display:flex; justify-content:space-between;
+    padding:0 26px;
+    font-family:'Cinzel', serif;
+    font-size:14px; letter-spacing:2px;
+    text-transform:uppercase;
+    color:var(--gold);
+    text-shadow:0 0 10px rgba(255,209,102,0.5);
+    pointer-events:none;
+    z-index:5;
+  }
+
+  .hud span.val{ color:var(--ink); }
+
+  .overlay{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center;
+    background:radial-gradient(ellipse at center, rgba(122,44,63,0.35) 0%, rgba(18,8,24,0.94) 78%);
+    gap:16px;
+    padding:20px;
+    z-index:10;
+  }
+
+  .overlay.hidden{ display:none; }
+
+  h1{
+    font-family:'Cinzel', serif;
+    font-weight:700;
+    font-size:clamp(30px,8vw,56px);
+    margin:0;
+    letter-spacing:3px;
+    color:var(--gold);
+    text-shadow:0 0 14px rgba(255,209,102,0.55), 0 0 34px rgba(255,123,57,0.35);
+  }
+
+  .sub{
+    font-size:clamp(15px,2.4vw,18px);
+    font-style:italic;
+    color:#e8cfa9;
+    max-width:420px;
+    line-height:1.6;
+  }
+
+  .sub b{ color:var(--gold); font-style:normal; }
+
+  button{
+    font-family:'Cinzel', serif;
+    background:transparent;
+    color:var(--gold);
+    border:2px solid var(--gold-deep);
+    padding:14px 34px;
+    font-size:14px;
+    letter-spacing:3px;
+    border-radius:2px;
+    cursor:pointer;
+    box-shadow:0 0 14px rgba(255,209,102,0.3) inset, 0 0 14px rgba(255,209,102,0.2);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  button:hover{ transform:translateY(-2px); box-shadow:0 0 22px rgba(255,209,102,0.5) inset, 0 0 22px rgba(255,209,102,0.35); }
+  button:active{ transform:translateY(0px); }
+  button:focus-visible{ outline:2px solid var(--gold); outline-offset:3px; }
+
+  .score-line{ font-family:'Cinzel', serif; font-size:16px; letter-spacing:2px; color:#e8cfa9; }
+  .score-line b{ color:var(--demon-glow); font-size:22px; }
+
+  .hint{
+    position:absolute; bottom:max(40px, calc(env(safe-area-inset-bottom) + 24px)); left:0; right:0;
+    text-align:center; font-size:11px; letter-spacing:1.5px;
+    font-family:'Cinzel', serif;
+    color:#8a6b6f;
+    pointer-events:none;
+    z-index:5;
+  }
+
+  .footer{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    font-family:'Cinzel', serif;
+    font-size:12px; letter-spacing:1.5px;
+    color:#c9a9a0;
+    margin-top:4px;
+  }
+
+  .footer .phone{
+    cursor:pointer;
+    font-size:16px;
+    filter:grayscale(0.2);
+    transition:transform .15s ease;
+  }
+  .footer .phone:hover{ transform:scale(1.15); }
+
+  .footer .email{
+    color:var(--gold);
+    text-shadow:0 0 8px rgba(255,209,102,0.4);
+    letter-spacing:1px;
+    opacity:0;
+    max-width:0;
+    overflow:hidden;
+    white-space:nowrap;
+    transition:opacity .25s ease;
+  }
+  .footer .email.shown{
+    opacity:1;
+    max-width:300px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    * { animation:none !important; transition:none !important; }
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game"></canvas>
+
+  <div class="hud">
+    <div>MERIT <span class="val" id="scoreVal">0</span></div>
+    <div>BEST <span class="val" id="bestVal">0</span></div>
+  </div>
+
+  <div class="overlay" id="startScreen">
+    <h1>AKASHVEER</h1>
+    <div class="sub">A sky warrior duels above the ancient plains at dusk. Dodge the <b>rakshasa</b> rising from below, gather <b>gold coins</b> blessed by the sun. The battle only grows fiercer.</div>
+    <button id="startBtn">BEGIN THE BATTLE</button>
+    <div class="footer">
+      <span>a product by Somendra Tripathi · 2026</span>
+      <span class="phone" id="phoneEmoji">☎️</span>
+      <span class="email" id="emailReveal">somendratripathi1999@gmail.com</span>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="overScreen">
+    <h1 style="font-size:clamp(24px,6vw,38px)">FALLEN FROM THE SKY</h1>
+    <div class="score-line">MERIT EARNED <b id="finalScore">0</b></div>
+    <div class="sub" id="bestLine"></div>
+    <button id="retryBtn">RETURN TO BATTLE</button>
+  </div>
+
+  <div class="hint">← → / A D / TAP LEFT-RIGHT HALF TO STEER</div>
+</div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+
+  const Sound = (function(){
+    let ac = null;
+    let windSource = null, windGain = null;
+
+    function ensure(){
+      if (!ac){
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        ac = new AC();
+      }
+      if (ac.state === 'suspended') ac.resume();
+      return ac;
+    }
+
+    function conch(){
+      const a = ensure(); if (!a) return;
+      const now = a.currentTime;
+      const osc = a.createOscillator();
+      const filter = a.createBiquadFilter();
+      const gain = a.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(110, now);
+      osc.frequency.linearRampToValueAtTime(147, now + 0.18);
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(500, now);
+      filter.frequency.linearRampToValueAtTime(1200, now + 0.5);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(0.32, now + 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.6);
+      osc.connect(filter); filter.connect(gain); gain.connect(a.destination);
+      osc.start(now); osc.stop(now + 1.7);
+    }
+
+    function coin(){
+      const a = ensure(); if (!a) return;
+      const now = a.currentTime;
+      const osc = a.createOscillator();
+      const gain = a.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.exponentialRampToValueAtTime(1760, now + 0.1);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(0.28, now + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+      osc.connect(gain); gain.connect(a.destination);
+      osc.start(now); osc.stop(now + 0.25);
+    }
+
+    function hit(){
+      const a = ensure(); if (!a) return;
+      const now = a.currentTime;
+      const size = Math.floor(a.sampleRate * 0.3);
+      const buffer = a.createBuffer(1, size, a.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i=0;i<size;i++){ data[i] = (Math.random()*2-1) * (1 - i/size); }
+      const noise = a.createBufferSource();
+      noise.buffer = buffer;
+      const filter = a.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(900, now);
+      const gain = a.createGain();
+      gain.gain.setValueAtTime(0.45, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+      noise.connect(filter); filter.connect(gain); gain.connect(a.destination);
+      noise.start(now);
+    }
+
+    function startWind(){
+      const a = ensure(); if (!a) return;
+      stopWind();
+      const size = 2 * a.sampleRate;
+      const buffer = a.createBuffer(1, size, a.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i=0;i<size;i++){ data[i] = Math.random()*2-1; }
+      const noise = a.createBufferSource();
+      noise.buffer = buffer;
+      noise.loop = true;
+      const filter = a.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 500;
+      filter.Q.value = 0.5;
+      const gain = a.createGain();
+      gain.gain.value = 0.045;
+      noise.connect(filter); filter.connect(gain); gain.connect(a.destination);
+      noise.start();
+      windSource = noise; windGain = gain;
+    }
+
+    function stopWind(){
+      if (windSource){ try{ windSource.stop(); }catch(e){} windSource.disconnect(); windSource = null; }
+      if (windGain){ windGain.disconnect(); windGain = null; }
+    }
+
+    let musicTimer = null;
+    let musicOn = false;
+    function startMusic(){
+      const a = ensure(); if (!a) return;
+      if (musicOn) return;
+      musicOn = true;
+      const scale = [196.00, 220.00, 233.08, 261.63, 293.66, 329.63, 349.23];
+      const pattern = [0,2,4,2,5,4,2,0,3,2,0,4,5,4,2,0];
+      let step = 0;
+      function playNote(){
+        if (!musicOn) return;
+        const idx = pattern[step % pattern.length];
+        const freq = scale[idx % scale.length];
+        const now = a.currentTime;
+        const osc = a.createOscillator();
+        const gain = a.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.linearRampToValueAtTime(0.06, now + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+        osc.connect(gain); gain.connect(a.destination);
+        osc.start(now); osc.stop(now + 0.55);
+        step++;
+        musicTimer = setTimeout(playNote, 410);
+      }
+      playNote();
+    }
+    function stopMusic(){
+      musicOn = false;
+      if (musicTimer){ clearTimeout(musicTimer); musicTimer = null; }
+    }
+
+    return { conch, coin, hit, startWind, stopWind, startMusic, stopMusic };
+  })();
+
+  let W = 0, H = 0, DPR = 1;
+  const LANES = 4;
+  let laneW = 0;
+  let PLAYER_Y = 0;
+  let farMountain = [], nearMountain = [];
+
+  function resize(){
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+    laneW = W / LANES;
+    PLAYER_Y = H * 0.56;
+    farMountain = buildMountainPath(0.60, 7, 1);
+    nearMountain = buildMountainPath(0.70, 5, 2);
+
+    if (player) player.x = laneX(player.lane);
+  }
+
+  const startScreen = document.getElementById('startScreen');
+  const overScreen = document.getElementById('overScreen');
+  const scoreVal = document.getElementById('scoreVal');
+  const bestVal = document.getElementById('bestVal');
+  const finalScore = document.getElementById('finalScore');
+  const bestLine = document.getElementById('bestLine');
+
+  let best = 0;
+  try { best = parseInt(localStorage.getItem('akashveerBest') || '0', 10) || 0; } catch(e) { best = 0; }
+  bestVal.textContent = best;
+
+  let state = 'idle'; // idle | running | over
+  let player = { lane: 1.5, x: 0, targetLane: 1.5 };
+  let obstacles = []; // demons
+  let orbs = []; // gold coins
+  let speed = 3.6;
+  let spawnTimer = 0;
+  let orbTimer = 0;
+  let score = 0;
+  let scrollX = 0;
+  let cloudScroll = 0;
+  let shakeT = 0;
+  let t = 0;
+  let demonsPassed = 0;
+
+  function laneX(lane){ return lane * laneW + laneW/2; }
+
+  function reset(){
+    player = { lane: 1.5, x: laneX(1.5), targetLane: 1.5 };
+    obstacles = [];
+    orbs = [];
+    speed = 3.6;
+    spawnTimer = 0;
+    orbTimer = 0;
+    score = 0;
+    scrollX = 0;
+    cloudScroll = 0;
+    shakeT = 0;
+    t = 0;
+    demonsPassed = 0;
+  }
+
+  function startGame(){
+    reset();
+    state = 'running';
+    startScreen.classList.add('hidden');
+    overScreen.classList.add('hidden');
+    Sound.conch();
+    Sound.startMusic();
+    Sound.startWind();
+    requestAnimationFrame(loop);
+  }
+
+  function endGame(){
+    state = 'over';
+    shakeT = 18;
+    Sound.hit();
+    Sound.stopWind();
+    if (score > best){
+      best = score;
+      try { localStorage.setItem('akashveerBest', String(best)); } catch(e) {}
+    }
+    finalScore.textContent = score;
+    bestVal.textContent = best;
+    bestLine.innerHTML = score >= best ? '<b style="color:var(--gold)">A NEW LEGEND</b>' : 'BEST <b>' + best + '</b>';
+    setTimeout(()=>{ overScreen.classList.remove('hidden'); }, 350);
+  }
+
+  window.addEventListener('keydown', (e)=>{
+    if (state !== 'running') return;
+    if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a'){ shiftLane(-1); }
+    if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd'){ shiftLane(1); }
+  });
+
+  canvas.addEventListener('pointerdown', (e)=>{
+    if (state !== 'running') return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    if (x < rect.width/2) shiftLane(-1); else shiftLane(1);
+  });
+
+  function shiftLane(dir){
+    player.targetLane = Math.max(0.5, Math.min(LANES-0.5, player.targetLane + dir));
+  }
+
+  document.getElementById('startBtn').addEventListener('click', startGame);
+  document.getElementById('retryBtn').addEventListener('click', startGame);
+
+  (function(){
+    const phone = document.getElementById('phoneEmoji');
+    const email = document.getElementById('emailReveal');
+    let tapCount = 0;
+    let tapTimer = null;
+    phone.addEventListener('click', ()=>{
+      tapCount++;
+      if (tapCount === 1){
+        tapTimer = setTimeout(()=>{ tapCount = 0; }, 350);
+      } else if (tapCount === 2){
+        clearTimeout(tapTimer);
+        tapCount = 0;
+        email.classList.toggle('shown');
+      }
+    });
+  })();
+
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', resize);
+
+  function spawnObstacle(){
+    const lane = 0.5 + Math.floor(Math.random()*LANES);
+    obstacles.push({ lane, y: -60, sway: Math.random()*Math.PI*2 });
+  }
+  function spawnOrb(){
+    const lane = 0.5 + Math.floor(Math.random()*LANES);
+    orbs.push({ lane, y: -30, r: 12, spin: Math.random()*Math.PI*2 });
+  }
+
+  function buildMountainPath(baseFrac, peaks, seed){
+    const pts = [];
+    const baseY = H * baseFrac;
+    for (let i=0;i<=peaks;i++){
+      const x = (W/peaks) * i;
+      const jag = Math.sin(i*1.7+seed*3.1)*0.5+0.5;
+      const y = baseY - jag * (H*0.16) - (i%2===0?H*0.02:0);
+      pts.push({x,y});
+    }
+    return pts;
+  }
+
+  function drawSky(){
+    const grad = ctx.createLinearGradient(0,0,0,H*0.8);
+    grad.addColorStop(0, '#241033');
+    grad.addColorStop(0.45, '#7a2c3f');
+    grad.addColorStop(0.8, '#ff9a4d');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,0,W,H*0.8);
+
+    const sunY = H*0.62;
+    const sunR = Math.min(W,H)*0.09;
+    const sunGrad = ctx.createRadialGradient(W*0.5, sunY, 4, W*0.5, sunY, sunR*2.3);
+    sunGrad.addColorStop(0, 'rgba(255,235,180,0.95)');
+    sunGrad.addColorStop(0.4, 'rgba(255,190,110,0.55)');
+    sunGrad.addColorStop(1, 'rgba(255,150,80,0)');
+    ctx.fillStyle = sunGrad;
+    ctx.beginPath();
+    ctx.arc(W*0.5, sunY, sunR*2.3, 0, Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle = '#fff1d0';
+    ctx.beginPath();
+    ctx.arc(W*0.5, sunY, sunR, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  function drawClouds(){
+    cloudScroll += 0.15;
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    for (let i=0;i<6;i++){
+      const spanW = W+160;
+      const cx = ((i*(spanW/6) + cloudScroll*(1+i*0.2)) % spanW) - 80;
+      const cy = H*0.1 + (i%3)*(H*0.08);
+      const w = W*0.13 + (i%2)*(W*0.03);
+      ctx.fillStyle = i%2===0 ? '#ffd9b0' : '#ffb0a0';
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, w, w*0.28, 0, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawMountainLayer(pts, color, parallax){
+    ctx.save();
+    const offset = (scrollX*parallax) % W;
+    for (let pass=-1; pass<=1; pass++){
+      ctx.beginPath();
+      ctx.moveTo(-offset + pass*W, H);
+      pts.forEach((p)=>{
+        ctx.lineTo(p.x - offset + pass*W, p.y);
+      });
+      ctx.lineTo(W - offset + pass*W, H);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawPlains(){
+    const y0 = H*0.86;
+    ctx.save();
+    const grad = ctx.createLinearGradient(0,y0,0,H);
+    grad.addColorStop(0, '#3a2b1e');
+    grad.addColorStop(1, '#1c140f');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,y0,W,H-y0);
+
+    ctx.strokeStyle = 'rgba(255,209,102,0.12)';
+    ctx.lineWidth = 1;
+    const off = scrollX*3 % 40;
+    for (let x=-40+off; x<W; x+=40){
+      ctx.beginPath();
+      ctx.moveTo(x, y0);
+      ctx.lineTo(x - 30, H);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawBackground(){
+    drawSky();
+    drawClouds();
+    drawMountainLayer(farMountain, 'rgba(74,37,69,0.85)', 0.4);
+    drawMountainLayer(nearMountain, 'rgba(46,22,48,0.95)', 0.8);
+    drawPlains();
+    scrollX += speed*0.5;
+  }
+
+  function drawPlayer(){
+    const x = player.x;
+    const y = PLAYER_Y + Math.sin(t*0.08)*4;
+    ctx.save();
+    ctx.translate(x,y);
+
+    const auraGrad = ctx.createRadialGradient(0,0,4,0,0,34);
+    auraGrad.addColorStop(0, 'rgba(255,209,102,0.55)');
+    auraGrad.addColorStop(1, 'rgba(255,209,102,0)');
+    ctx.fillStyle = auraGrad;
+    ctx.beginPath();
+    ctx.arc(0,0,34,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(255,123,57,0.55)';
+    ctx.beginPath();
+    ctx.moveTo(-6,6);
+    ctx.quadraticCurveTo(-22, 22, -14, 34);
+    ctx.quadraticCurveTo(-4, 22, 2, 10);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#ff7b39';
+    ctx.beginPath();
+    ctx.moveTo(-9,6);
+    ctx.lineTo(9,6);
+    ctx.lineTo(6,22);
+    ctx.lineTo(0,16);
+    ctx.lineTo(-6,22);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#e8b382';
+    ctx.beginPath();
+    ctx.moveTo(-8,-14);
+    ctx.lineTo(8,-14);
+    ctx.lineTo(9,7);
+    ctx.lineTo(-9,7);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = '#3a2410';
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.arc(13,-4, 15, -0.9, 0.9);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,241,208,0.8)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(13, -18.5);
+    ctx.lineTo(13, 11.5);
+    ctx.stroke();
+
+    ctx.fillStyle = '#e8b382';
+    ctx.beginPath();
+    ctx.arc(0,-20,8,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle = '#241207';
+    ctx.beginPath();
+    ctx.arc(0,-24,6.5,Math.PI, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(0,-29,3,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawDemon(o){
+    const x = laneX(o.lane) + Math.sin(o.sway + t*0.05)*6;
+    const y = o.y;
+    ctx.save();
+    ctx.translate(x,y);
+
+    const glow = ctx.createRadialGradient(0,0,2,0,0,30);
+    glow.addColorStop(0, 'rgba(255,68,51,0.35)');
+    glow.addColorStop(1, 'rgba(255,68,51,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(0,0,30,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle = '#5c1420';
+    ctx.beginPath();
+    ctx.moveTo(-12,-6);
+    ctx.lineTo(-16,4);
+    ctx.lineTo(-9,16);
+    ctx.lineTo(0,12);
+    ctx.lineTo(9,16);
+    ctx.lineTo(16,4);
+    ctx.lineTo(12,-6);
+    ctx.lineTo(0,-11);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,68,51,0.6)';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+
+    ctx.strokeStyle = '#2c0a10';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-16,4); ctx.lineTo(-22,10);
+    ctx.moveTo(16,4); ctx.lineTo(22,10);
+    ctx.stroke();
+
+    ctx.fillStyle = '#4a1018';
+    ctx.beginPath();
+    ctx.arc(0,-18,8,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle = '#1a0508';
+    ctx.beginPath();
+    ctx.moveTo(-6,-22); ctx.lineTo(-13,-32); ctx.lineTo(-4,-25);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(6,-22); ctx.lineTo(13,-32); ctx.lineTo(4,-25);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#ff4433';
+    ctx.shadowColor = '#ff4433';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(-3,-18,1.6,0,Math.PI*2);
+    ctx.arc(3,-18,1.6,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawCoin(o){
+    const x = laneX(o.lane);
+    const y = o.y;
+    o.spin += 0.12;
+    const squish = Math.abs(Math.cos(o.spin));
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.scale(Math.max(0.25, squish), 1);
+
+    ctx.shadowColor = '#ffd166';
+    ctx.shadowBlur = 14;
+    const g = ctx.createRadialGradient(-3,-3,1,0,0,o.r);
+    g.addColorStop(0, '#fff3c4');
+    g.addColorStop(0.6, '#ffd166');
+    g.addColorStop(1, '#c9891f');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(0,0,o.r,0,Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = '#8a5a12';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function rectishHit(dx, dy, r1, r2){
+    return (dx*dx + dy*dy) < ((r1+r2)*(r1+r2));
+  }
+
+  function loop(){
+    if (state !== 'running') return;
+    t++;
+
+    player.lane += (player.targetLane - player.lane) * 0.3;
+    player.x = laneX(player.lane);
+
+    if (shakeT > 0){
+      ctx.save();
+      ctx.translate((Math.random()-0.5)*shakeT, (Math.random()-0.5)*shakeT);
+      shakeT *= 0.85;
+      if (shakeT < 0.5) shakeT = 0;
+    }
+
+    ctx.clearRect(0,0,W,H);
+    drawBackground();
+
+    if (demonsPassed >= 20){
+      speed += 0.0032;
+    }
+    spawnTimer -= 1;
+    orbTimer -= 1;
+
+    if (spawnTimer <= 0){
+      spawnObstacle();
+      spawnTimer = Math.max(26, 58 - speed*4);
+    }
+    if (orbTimer <= 0){
+      spawnOrb();
+      orbTimer = 90 + Math.random()*60;
+    }
+
+    for (let i = obstacles.length-1; i>=0; i--){
+      const o = obstacles[i];
+      o.y += speed;
+      drawDemon(o);
+
+      const dx = (laneX(o.lane) + Math.sin(o.sway + t*0.05)*6) - player.x;
+      const dy = o.y - PLAYER_Y;
+      if (rectishHit(dx,dy, 13, 15)){
+        endGame();
+      }
+      if (o.y > H+60){
+        obstacles.splice(i,1);
+        demonsPassed++;
+      }
+    }
+
+    for (let i = orbs.length-1; i>=0; i--){
+      const orb = orbs[i];
+      orb.y += speed;
+      drawCoin(orb);
+
+      const dx = laneX(orb.lane) - player.x;
+      const dy = orb.y - PLAYER_Y;
+      if (rectishHit(dx,dy, orb.r, 13)){
+        score += 25;
+        Sound.coin();
+        orbs.splice(i,1);
+        continue;
+      }
+      if (orb.y > H+40) orbs.splice(i,1);
+    }
+
+    drawPlayer();
+
+    if (shakeT >= 0) ctx.restore();
+
+    score += 1;
+    scoreVal.textContent = score;
+
+    requestAnimationFrame(loop);
+  }
+
+  function idleFrame(){
+    if (state !== 'idle') return;
+    ctx.clearRect(0,0,W,H);
+    drawBackground();
+    requestAnimationFrame(idleFrame);
+  }
+
+  resize();
+  idleFrame();
+})();
+</script>
+</body>
+</html>
