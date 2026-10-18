@@ -433,6 +433,7 @@
   (function(){
     const phone = document.getElementById('phoneEmoji');
     const email = document.getElementById('emailReveal');
+    if (!phone || !email) return;
     let tapCount = 0;
     let tapTimer = null;
     phone.addEventListener('click', ()=>{
